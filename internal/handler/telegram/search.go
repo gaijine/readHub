@@ -8,7 +8,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func (h *Handler) handleSearch(chatID int64, query string) {
+func (h *Handler) handleSearch(chatID, telegramID int64, query string) {
 	if query == "" {
 		msg := tgbotapi.NewMessage(chatID, "Использование:\n/search Название книги")
 		_, err := h.bot.Send(msg)
@@ -40,6 +40,11 @@ func (h *Handler) handleSearch(chatID int64, query string) {
 	if len(books) > 5 { // если книг будет больше 5
 		books = books[:5] // новый массив не создается, создается слайс который смотрит на первые 5 элементов старого массива(слайса)
 	} // если книг до 5 это не сработает
+
+	h.searchCache[telegramID] = books // добавили результат (список книг) в кеш память
+	log.Println("CACHE SAVE")
+	log.Println(telegramID)
+	log.Println(len(books))
 
 	var builder strings.Builder                 // в буфере будет сохранять данные строки
 	var buttons []tgbotapi.InlineKeyboardButton // хранит кнопки

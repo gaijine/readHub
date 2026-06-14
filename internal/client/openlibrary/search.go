@@ -9,8 +9,6 @@ import (
 	"strings"
 
 	"readHub/internal/domain"
-
-	"github.com/k0kubun/pp"
 )
 
 const searchPath = "/search.json"
@@ -59,7 +57,7 @@ func (c *Client) SearchBooks(query string) ([]domain.SearchBook, error) {
 		}
 		resultList = append(resultList, book)
 	}
-	pp.Println(resultList)
+	// pp.Println(resultList)
 	return resultList, nil
 }
 

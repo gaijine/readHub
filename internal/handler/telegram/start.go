@@ -3,6 +3,8 @@ package telegram
 import (
 	"log"
 
+	"readHub/internal/domain"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -15,10 +17,24 @@ ReadHub поможет сохранять книги, которые вы хот
 Приятного чтения! 📖
 	`
 
-func (h *Handler) handleStart(chatID int64) {
+func (h *Handler) handleStart(chatID, telegramID int64, username string) {
+	user := domain.User{
+		TelegramID: telegramID,
+		Username:   username,
+	}
+
+	_, err := h.bookService.GetUserByTelegramID(telegramID)
+	if err != nil {
+		err = h.bookService.CreateUser(user)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
+
 	msg := tgbotapi.NewMessage(chatID, startMessage)
 
-	_, err := h.bot.Send(msg)
+	_, err = h.bot.Send(msg)
 	if err != nil {
 		log.Println(err)
 		return

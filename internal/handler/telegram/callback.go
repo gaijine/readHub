@@ -4,7 +4,10 @@ import (
 	"log"
 	"strings"
 
+	"readHub/internal/domain"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/k0kubun/pp"
 )
 
 func (h *Handler) handleCallback(update tgbotapi.Update) {
@@ -17,6 +20,7 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 
 	action := parts[0]
 	openLibraryID := parts[1]
+	telegramID := update.CallbackQuery.From.ID
 
 	log.Println(action)
 	log.Println(openLibraryID)
@@ -55,6 +59,25 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 		}
 
 	case "add":
+		books := h.searchCache[telegramID]
+		log.Println(books)
+
+		var selectedBook domain.SearchBook
+
+		for _, book := range books {
+			if book.OpenLibraryID == openLibraryID {
+				selectedBook = book
+				break
+			}
+		}
+		pp.Println(selectedBook)
+
+		user, err := h.bookService.GetUserByTelegramID(telegramID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		log.Println(user)
 	case "back":
 	}
 }

@@ -16,7 +16,10 @@ type BookService interface {
 	UpdateProgress(userID, bookID int64, page int) error
 	DeleteBook(userID, bookID int64) error
 	GetBookDetails(openLibraryID string) (domain.BookDetails, error)
-	AddBookByOpenLibraryID(telegramID int64, openLibraryID string) error
+	// AddBookByOpenLibraryID(telegramID int64, openLibraryID string) error
+	// GetSearchBookByID(openLibraryID string)(domain.SearchBook, error)
+	GetUserByTelegramID(telegramID int64) (domain.User, error)
+	CreateUser(user domain.User) error
 }
 
 type bookService struct {
@@ -87,9 +90,6 @@ func (b *bookService) AddBook(userID int64, bookInfo domain.SearchBook) error {
 	}
 	log.Println("book added successed")
 	return nil
-}
-
-func (b *bookService) AddBookByOpenLibraryID(teledramID int64, openLibraryID string) error {
 }
 
 func (b *bookService) GetUserBooks(userID int64) ([]domain.Book, error) {
@@ -173,4 +173,28 @@ func (b *bookService) GetBookDetails(openLibraryID string) (domain.BookDetails, 
 		return domain.BookDetails{}, err
 	}
 	return book, nil
+}
+
+// func (b *bookService) AddBookByOpenLibraryID(teledramID int64, openLibraryID string) error {
+
+// }
+
+// func (b *bookService) GetSearchBookByID (openLibraryID string)(domain.SearchBook, error){
+
+// }
+
+func (b *bookService) GetUserByTelegramID(telegramID int64) (domain.User, error) {
+	user, err := b.userRepo.GetByTelegramID(telegramID)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return user, nil
+}
+
+func (b *bookService) CreateUser(user domain.User) error {
+	err := b.userRepo.Create(user)
+	if err != nil {
+		return err
+	}
+	return nil
 }
