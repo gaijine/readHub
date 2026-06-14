@@ -14,7 +14,7 @@ CREATE TABLE books
     title           TEXT NOT NULL,
     author          TEXT NOT NULL DEFAULT '',
 
-    total_pages     INT CHECK (total_pages > 0),
+    total_pages     INT CHECK (total_pages >= 0),
     current_page    INT NOT NULL DEFAULT 0 
         CHECK(current_page >= 0),
 

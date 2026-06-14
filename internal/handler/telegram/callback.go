@@ -77,7 +77,14 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			log.Println(err)
 			return
 		}
-		log.Println(user)
+		log.Printf("%+v\n", selectedBook)
+		err = h.bookService.AddBook(user.ID, selectedBook)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		log.Println("book added")
+
 	case "back":
 	}
 }
