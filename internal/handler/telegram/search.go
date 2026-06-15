@@ -49,6 +49,7 @@ func (h *Handler) handleSearch(chatID, telegramID int64, query string) {
 	var builder strings.Builder                 // в буфере будет сохранять данные строки
 	var buttons []tgbotapi.InlineKeyboardButton // хранит кнопки
 	var rows [][]tgbotapi.InlineKeyboardButton  // хранит строки, мол первый элемент это первая строка
+
 	for i, book := range books {
 		var author string
 		builder.WriteString("[")

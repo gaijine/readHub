@@ -60,5 +60,7 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 		h.handleStart(chatID, telegramID, username)
 	case "/search":
 		h.handleSearch(chatID, telegramID, query)
+	case "/mybooks":
+		h.handleMyBooks(chatID, telegramID)
 	}
 }

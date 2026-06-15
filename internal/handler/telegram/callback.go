@@ -2,32 +2,33 @@ package telegram
 
 import (
 	"log"
+	"strconv"
 	"strings"
 
 	"readHub/internal/domain"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/k0kubun/pp"
 )
 
 func (h *Handler) handleCallback(update tgbotapi.Update) {
 	text := update.CallbackQuery.Data
+	chatID := update.CallbackQuery.Message.Chat.ID
+	telegramID := update.CallbackQuery.From.ID
 
 	parts := strings.Split(text, ":")
-	if len(parts) != 2 {
+	if len(parts) < 2 {
 		return
 	}
 
 	action := parts[0]
-	openLibraryID := parts[1]
-	telegramID := update.CallbackQuery.From.ID
+	// data := parts[1]
 
-	log.Println(action)
-	log.Println(openLibraryID)
+	// log.Println(action)
+	// log.Println(parts[1])
 
 	switch action {
 	case "details":
-		book, err := h.bookService.GetBookDetails(openLibraryID)
+		book, err := h.bookService.GetBookDetails(parts[1])
 		if err != nil {
 			log.Println(err)
 			return
@@ -50,7 +51,7 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(rows...)
 
-		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, builder.String())
+		msg := tgbotapi.NewMessage(chatID, builder.String())
 		msg.ReplyMarkup = keyboard
 
 		_, err = h.bot.Send(msg)
@@ -60,17 +61,15 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 
 	case "add":
 		books := h.searchCache[telegramID]
-		log.Println(books)
 
 		var selectedBook domain.SearchBook
 
 		for _, book := range books {
-			if book.OpenLibraryID == openLibraryID {
+			if book.OpenLibraryID == parts[1] {
 				selectedBook = book
 				break
 			}
 		}
-		pp.Println(selectedBook)
 
 		user, err := h.bookService.GetUserByTelegramID(telegramID)
 		if err != nil {
@@ -83,8 +82,89 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			log.Println(err)
 			return
 		}
-		log.Println("book added")
+
+		msg := tgbotapi.NewMessage(chatID, "✅ Книга успешно добавлена в библиотеку")
+		_, err = h.bot.Send(msg)
+		if err != nil {
+			log.Println(err)
+		}
+	case "mybook":
+		bookID, err := strconv.ParseInt(parts[1], 10, 64)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		book, err := h.bookService.GetBookByID(bookID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		var builder strings.Builder
+		builder.WriteString("📖 ")
+		builder.WriteString(book.Title)
+		builder.WriteString("\n\n")
+
+		builder.WriteString("Автор:		")
+		builder.WriteString(book.Author)
+		builder.WriteString("\n")
+
+		builder.WriteString("Статус:	 ")
+		builder.WriteString(string(book.Status))
+		builder.WriteString("\n")
+
+		builder.WriteString("Прогресс:     ")
+		builder.WriteString(strconv.Itoa(book.CurrentPage))
+		builder.WriteString(" / ")
+		builder.WriteString(strconv.Itoa(book.TotalPages))
+
+		var rows [][]tgbotapi.InlineKeyboardButton
+		buttonWant := tgbotapi.NewInlineKeyboardButtonData("📚 Хочу", "status:want:"+strconv.FormatInt(bookID, 10))
+		buttonReading := tgbotapi.NewInlineKeyboardButtonData("📖 Читаю", "status:reading:"+strconv.FormatInt(bookID, 10))
+		buttonCompleted := tgbotapi.NewInlineKeyboardButtonData("✅ Прочитано", "status:completed:"+strconv.FormatInt(bookID, 10))
+		buttonDelete := tgbotapi.NewInlineKeyboardButtonData("🗑 Удалить", "delete:"+strconv.FormatInt(bookID, 10))
+
+		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonWant})
+		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonReading})
+		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonCompleted})
+		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonDelete})
+
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(rows...)
+
+		msg := tgbotapi.NewMessage(chatID, builder.String())
+		msg.ReplyMarkup = keyboard
+
+		_, err = h.bot.Send(msg)
+		if err != nil {
+			log.Println(err)
+		}
+	case "status":
+		user, err := h.bookService.GetUserByTelegramID(telegramID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		status := parts[1]
+		bookID, err := strconv.ParseInt(parts[2], 10, 64)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		err = h.bookService.UpdateStatus(user.ID, bookID, domain.BookStatus(status))
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		msg := tgbotapi.NewMessage(chatID, "✅ Статус книги обновлён")
+		_, err = h.bot.Send(msg)
+		if err != nil {
+			log.Println(err)
+		}
 
 	case "back":
+
 	}
 }
