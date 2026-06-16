@@ -131,7 +131,7 @@ func (b *bookService) UpdateProgress(userID, bookID int64, page int) error {
 		return ErrNegativePage
 	}
 
-	if page > book.TotalPages {
+	if book.TotalPages > 0 && page > book.TotalPages {
 		return ErrPageExceedsBookLength
 	}
 
