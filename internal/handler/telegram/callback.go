@@ -163,6 +163,59 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 		if err != nil {
 			log.Println(err)
 		}
+	case "delete":
+		bookID, err := strconv.ParseInt(parts[1], 10, 64)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		buttonYes := tgbotapi.NewInlineKeyboardButtonData("✅ Да", "confirmdelete:"+strconv.FormatInt(bookID, 10))
+		buttonNo := tgbotapi.NewInlineKeyboardButtonData("❌ Нет", "canceldelete:"+strconv.FormatInt(bookID, 10))
+
+		var rows [][]tgbotapi.InlineKeyboardButton
+		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonYes})
+		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonNo})
+
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(rows...)
+
+		msg := tgbotapi.NewMessage(chatID, "Вы действительно хотите удалить книгу?")
+		msg.ReplyMarkup = keyboard
+
+		_, err = h.bot.Send(msg)
+		if err != nil {
+			log.Println(err)
+		}
+	case "confirmdelete":
+		user, err := h.bookService.GetUserByTelegramID(telegramID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		bookID, err := strconv.ParseInt(parts[1], 10, 64)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		err = h.bookService.DeleteBook(user.ID, bookID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		msg := tgbotapi.NewMessage(chatID, "🗑 Книга успешно удалена")
+		_, err = h.bot.Send(msg)
+		if err != nil {
+			log.Println(err)
+		}
+	case "canceldelete":
+		msg := tgbotapi.NewMessage(chatID, "Удаление отменено")
+		_, err := h.bot.Send(msg)
+		if err != nil {
+			log.Println(err)
+		}
 
 	case "back":
 
