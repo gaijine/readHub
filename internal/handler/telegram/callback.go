@@ -13,6 +13,7 @@ import (
 func (h *Handler) handleCallback(update tgbotapi.Update) {
 	text := update.CallbackQuery.Data
 	chatID := update.CallbackQuery.Message.Chat.ID
+	messageID := update.CallbackQuery.Message.MessageID
 	telegramID := update.CallbackQuery.From.ID
 
 	parts := strings.Split(text, ":")
@@ -100,40 +101,10 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			return
 		}
 
-		var builder strings.Builder
-		builder.WriteString("📖 ")
-		builder.WriteString(book.Title)
-		builder.WriteString("\n\n")
+		text := h.buildBookCard(book)
+		keyboard := h.buildBookKeyboard(bookID)
 
-		builder.WriteString("Автор:		")
-		builder.WriteString(book.Author)
-		builder.WriteString("\n")
-
-		builder.WriteString("Статус:	 ")
-		builder.WriteString(string(book.Status))
-		builder.WriteString("\n")
-
-		builder.WriteString("Прогресс:     ")
-		builder.WriteString(strconv.Itoa(book.CurrentPage))
-		builder.WriteString(" / ")
-		builder.WriteString(strconv.Itoa(book.TotalPages))
-
-		var rows [][]tgbotapi.InlineKeyboardButton
-		buttonWant := tgbotapi.NewInlineKeyboardButtonData("📚 Хочу", "status:want:"+strconv.FormatInt(bookID, 10))
-		buttonReading := tgbotapi.NewInlineKeyboardButtonData("📖 Читаю", "status:reading:"+strconv.FormatInt(bookID, 10))
-		buttonCompleted := tgbotapi.NewInlineKeyboardButtonData("✅ Прочитано", "status:completed:"+strconv.FormatInt(bookID, 10))
-		buttonUpdateProgress := tgbotapi.NewInlineKeyboardButtonData("📄 Обновить прогресс", "progress:"+strconv.FormatInt(bookID, 10))
-		buttonDelete := tgbotapi.NewInlineKeyboardButtonData("🗑 Удалить", "delete:"+strconv.FormatInt(bookID, 10))
-
-		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonWant})
-		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonReading})
-		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonCompleted})
-		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonUpdateProgress})
-		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonDelete})
-
-		keyboard := tgbotapi.NewInlineKeyboardMarkup(rows...)
-
-		msg := tgbotapi.NewMessage(chatID, builder.String())
+		msg := tgbotapi.NewMessage(chatID, text)
 		msg.ReplyMarkup = keyboard
 
 		_, err = h.bot.Send(msg)
@@ -160,8 +131,19 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			return
 		}
 
-		msg := tgbotapi.NewMessage(chatID, "✅ Статус книги обновлён")
-		_, err = h.bot.Send(msg)
+		book, err := h.bookService.GetBookByID(bookID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		text := h.buildBookCard(book)
+		keyboard := h.buildBookKeyboard(bookID)
+
+		edit := tgbotapi.NewEditMessageText(chatID, messageID, text)
+		edit.ReplyMarkup = &keyboard
+		// msg := tgbotapi.NewMessage(chatID, "✅ Статус книги обновлён")
+		_, err = h.bot.Send(edit)
 		if err != nil {
 			log.Println(err)
 		}
@@ -213,8 +195,25 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			log.Println(err)
 		}
 	case "canceldelete":
-		msg := tgbotapi.NewMessage(chatID, "Удаление отменено")
-		_, err := h.bot.Send(msg)
+		bookID, err := strconv.ParseInt(parts[1], 10, 64)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		book, err := h.bookService.GetBookByID(bookID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		text := h.buildBookCard(book)
+		keyboard := h.buildBookKeyboard(bookID)
+
+		edit := tgbotapi.NewEditMessageText(chatID, messageID, text)
+		edit.ReplyMarkup = &keyboard
+
+		_, err = h.bot.Send(edit)
 		if err != nil {
 			log.Println(err)
 		}
