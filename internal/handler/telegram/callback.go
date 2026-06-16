@@ -122,11 +122,13 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 		buttonWant := tgbotapi.NewInlineKeyboardButtonData("📚 Хочу", "status:want:"+strconv.FormatInt(bookID, 10))
 		buttonReading := tgbotapi.NewInlineKeyboardButtonData("📖 Читаю", "status:reading:"+strconv.FormatInt(bookID, 10))
 		buttonCompleted := tgbotapi.NewInlineKeyboardButtonData("✅ Прочитано", "status:completed:"+strconv.FormatInt(bookID, 10))
+		buttonUpdateProgress := tgbotapi.NewInlineKeyboardButtonData("📄 Обновить прогресс", "progress:"+strconv.FormatInt(bookID, 10))
 		buttonDelete := tgbotapi.NewInlineKeyboardButtonData("🗑 Удалить", "delete:"+strconv.FormatInt(bookID, 10))
 
 		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonWant})
 		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonReading})
 		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonCompleted})
+		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonUpdateProgress})
 		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonDelete})
 
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(rows...)
@@ -216,7 +218,19 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 		if err != nil {
 			log.Println(err)
 		}
+	case "progress":
+		bookID, err := strconv.ParseInt(parts[1], 10, 64)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		h.progressState[telegramID] = bookID
 
+		msg := tgbotapi.NewMessage(chatID, "Введите текущую страницу книги сообщением")
+		_, err = h.bot.Send(msg)
+		if err != nil {
+			log.Println(err)
+		}
 	case "back":
 
 	}

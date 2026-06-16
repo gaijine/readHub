@@ -1,6 +1,8 @@
 package telegram
 
 import (
+	"log"
+	"strconv"
 	"strings"
 
 	"readHub/internal/domain"
@@ -10,16 +12,20 @@ import (
 )
 
 type Handler struct {
-	bookService service.BookService
-	bot         *tgbotapi.BotAPI
-	searchCache map[int64][]domain.SearchBook // будет хранится результат поиска в кеше, мол список книг после поиска
+	bookService   service.BookService
+	bot           *tgbotapi.BotAPI
+	searchCache   map[int64][]domain.SearchBook // будет хранится результат поиска в кеше, мол список книг после поиска
+	progressState map[int64]int64               // будет хранится телеграм айди и айди книги, чтоб понимать у кого какую книгу обновлять
+	// для того чтоб после нажатия "обновить прогресс" в памяти сохранялось h.progressState[8798127434] = 3
+	// что значит Пользователь 8798127434 сейчас вводит прогресс для книги 3
 }
 
 func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI) *Handler {
 	return &Handler{
-		bookService: bookService,
-		bot:         bot,
-		searchCache: make(map[int64][]domain.SearchBook),
+		bookService:   bookService,
+		bot:           bot,
+		searchCache:   make(map[int64][]domain.SearchBook),
+		progressState: make(map[int64]int64),
 	}
 }
 
@@ -45,6 +51,39 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 	chatID := update.Message.Chat.ID     // получаем айди чата
 	telegramID := update.Message.From.ID // получаем телеграм id
 	username := update.Message.From.UserName
+
+	bookID, exists := h.progressState[telegramID]
+	if exists {
+		page, err := strconv.Atoi(text)
+		if err != nil {
+			msg := tgbotapi.NewMessage(chatID, "Введите число")
+			_, err = h.bot.Send(msg)
+			return
+		}
+
+		user, err := h.bookService.GetUserByTelegramID(telegramID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		err = h.bookService.UpdateProgress(user.ID, bookID, page)
+		if err != nil {
+			log.Println(err)
+
+			msg := tgbotapi.NewMessage(chatID, err.Error())
+			_, _ = h.bot.Send(msg)
+
+			return
+		}
+		delete(h.progressState, telegramID)
+
+		msg := tgbotapi.NewMessage(chatID, "✅ Прогресс обновлён")
+		_, err = h.bot.Send(msg)
+		if err != nil {
+			log.Println(err)
+		}
+		return
+	}
 
 	parts := strings.Fields(text) // делим текст на слайс слов
 
