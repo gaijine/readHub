@@ -15,15 +15,15 @@ func (h *Handler) buildBookCard(book domain.Book) string {
 	builder.WriteString(book.Title)
 	builder.WriteString("\n\n")
 
-	builder.WriteString("Автор:		")
+	builder.WriteString("👤 Автор:		")
 	builder.WriteString(book.Author)
 	builder.WriteString("\n")
 
-	builder.WriteString("Статус:	 ")
+	builder.WriteString("📚 Статус:	 ")
 	builder.WriteString(string(book.Status))
 	builder.WriteString("\n")
 
-	builder.WriteString("Прогресс:     ")
+	builder.WriteString("📄 Прогресс:     ")
 	builder.WriteString(strconv.Itoa(book.CurrentPage))
 	builder.WriteString(" / ")
 	builder.WriteString(strconv.Itoa(book.TotalPages))

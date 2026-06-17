@@ -141,12 +141,10 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 
 		text := h.buildBookCard(book)
 		keyboard := h.buildBookKeyboard(bookID)
-		photo := tgbotapi.NewPhoto(chatID, tgbotapi.FileURL(book.CoverURL))
-		photo.Caption = text
-		photo.ReplyMarkup = keyboard
+
 		edit := tgbotapi.NewEditMessageCaption(chatID, messageID, text)
 		edit.ReplyMarkup = &keyboard
-		// msg := tgbotapi.NewMessage(chatID, "✅ Статус книги обновлён")
+
 		_, err = h.bot.Send(edit)
 		if err != nil {
 			log.Println(err)
@@ -206,28 +204,6 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			log.Printf("Ошибка удаления сообщения: %v", err)
 			return
 		}
-		// bookID, err := strconv.ParseInt(parts[1], 10, 64)
-		// if err != nil {
-		// 	log.Println(err)
-		// 	return
-		// }
-
-		// book, err := h.bookService.GetBookByID(bookID)
-		// if err != nil {
-		// 	log.Println(err)
-		// 	return
-		// }
-
-		// text := h.buildBookCard(book)
-		// keyboard := h.buildBookKeyboard(bookID)
-
-		// edit := tgbotapi.NewEditMessageText(chatID, messageID, text)
-		// edit.ReplyMarkup = &keyboard
-
-		// _, err = h.bot.Send(edit)
-		// if err != nil {
-		// 	log.Println(err)
-		// }
 	case "progress":
 		bookID, err := strconv.ParseInt(parts[1], 10, 64)
 		if err != nil {
