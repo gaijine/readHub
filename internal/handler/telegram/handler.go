@@ -11,12 +11,17 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+type ProgressState struct {
+	BookID    int64
+	MessageID int
+}
+
 type Handler struct {
 	bookService   service.BookService
 	bot           *tgbotapi.BotAPI
 	searchCache   map[int64][]domain.SearchBook // будет хранится результат поиска в кеше, мол список книг после поиска
-	progressState map[int64]int64               // будет хранится телеграм айди и айди книги, чтоб понимать у кого какую книгу обновлять
-	// для того чтоб после нажатия "обновить прогресс" в памяти сохранялось h.progressState[8798127434] = 3
+	progressState map[int64]ProgressState       // будет хранится телеграм айди как ключь, айди книги и сообщения как значение, чтоб понимать у кого какую книгу обновлять
+	// для того чтоб после нажатия "обновить прогресс" в памяти сохранялось h.progressState[8798127434] = {3, 23}
 	// что значит Пользователь 8798127434 сейчас вводит прогресс для книги 3
 }
 
@@ -25,7 +30,7 @@ func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI) *Handler 
 		bookService:   bookService,
 		bot:           bot,
 		searchCache:   make(map[int64][]domain.SearchBook),
-		progressState: make(map[int64]int64),
+		progressState: make(map[int64]ProgressState),
 	}
 }
 
@@ -52,12 +57,12 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 	telegramID := update.Message.From.ID // получаем телеграм id
 	username := update.Message.From.UserName
 
-	bookID, exists := h.progressState[telegramID]
+	state, exists := h.progressState[telegramID]
 	if exists {
 		page, err := strconv.Atoi(text)
 		if err != nil {
 			msg := tgbotapi.NewMessage(chatID, "Введите число")
-			_, err = h.bot.Send(msg)
+			_, _ = h.bot.Send(msg)
 			return
 		}
 
@@ -66,7 +71,7 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 			log.Println(err)
 			return
 		}
-		err = h.bookService.UpdateProgress(user.ID, bookID, page)
+		err = h.bookService.UpdateProgress(user.ID, state.BookID, page)
 		if err != nil {
 			log.Println(err)
 
@@ -75,13 +80,26 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 
 			return
 		}
-		delete(h.progressState, telegramID)
 
-		msg := tgbotapi.NewMessage(chatID, "✅ Прогресс обновлён")
-		_, err = h.bot.Send(msg)
+		book, err := h.bookService.GetBookByID(state.BookID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		text := h.buildBookCard(book)
+		keyboard := h.buildBookKeyboard(state.BookID)
+
+		edit := tgbotapi.NewEditMessageCaption(chatID, state.MessageID, text)
+		edit.ReplyMarkup = &keyboard
+
+		_, err = h.bot.Send(edit)
 		if err != nil {
 			log.Println(err)
 		}
+
+		delete(h.progressState, telegramID) // удаляем состояние из мапы (очищаем)
+
 		return
 	}
 

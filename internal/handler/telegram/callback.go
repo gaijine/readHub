@@ -210,12 +210,16 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			log.Println(err)
 			return
 		}
-		h.progressState[telegramID] = bookID
+		h.progressState[telegramID] = ProgressState{
+			BookID:    bookID,
+			MessageID: messageID,
+		}
 
 		msg := tgbotapi.NewMessage(chatID, "Введите текущую страницу книги сообщением")
 		_, err = h.bot.Send(msg)
 		if err != nil {
 			log.Println(err)
+			return
 		}
 	case "back":
 
