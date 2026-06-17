@@ -35,7 +35,7 @@ func (c *Client) GetBookDetails(openLibraryID string) (domain.BookDetails, error
 	}
 	var coverURL string
 	if len(response.Covers) == 0 {
-		coverURL = "Unknown"
+		coverURL = ""
 	} else {
 		cover := strconv.FormatInt(response.Covers[0], 10)
 		coverURL = "https://covers.openlibrary.org/b/id/" + cover + "-L.jpg"
@@ -46,6 +46,5 @@ func (c *Client) GetBookDetails(openLibraryID string) (domain.BookDetails, error
 		Title:         response.Title,
 		CoverURL:      coverURL,
 	}
-
 	return book, nil
 }

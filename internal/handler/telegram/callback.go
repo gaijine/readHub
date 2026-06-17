@@ -103,15 +103,24 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 
 		text := h.buildBookCard(book)
 		keyboard := h.buildBookKeyboard(bookID)
-		photo := tgbotapi.NewPhoto(chatID, tgbotapi.FileURL(book.CoverURL))
-		photo.Caption = text
-		photo.ReplyMarkup = keyboard
-		// msg := tgbotapi.NewMessage(chatID, text)
-		// msg.ReplyMarkup = keyboard
 
-		_, err = h.bot.Send(photo)
-		if err != nil {
-			log.Println(err)
+		if book.CoverURL == "" {
+			msg := tgbotapi.NewMessage(chatID, text)
+			msg.ReplyMarkup = keyboard
+
+			_, err = h.bot.Send(msg)
+			if err != nil {
+				log.Println(err)
+			}
+		} else {
+			photo := tgbotapi.NewPhoto(chatID, tgbotapi.FileURL(book.CoverURL))
+			photo.Caption = text
+			photo.ReplyMarkup = keyboard
+
+			_, err = h.bot.Send(photo)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	case "status":
 		user, err := h.bookService.GetUserByTelegramID(telegramID)

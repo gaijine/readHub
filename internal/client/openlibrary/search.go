@@ -45,10 +45,14 @@ func (c *Client) SearchBooks(query string) ([]domain.SearchBook, error) {
 
 	var resultList []domain.SearchBook
 	for _, v := range response.Docs {
+		var coverURL string
 		openLibID := strings.TrimPrefix(v.Key, "/works/")
-		cover := strconv.FormatInt(v.CoverID, 10)
-		coverURL := "https://covers.openlibrary.org/b/id/" + cover + "-L.jpg"
-
+		if v.CoverID > 0 {
+			cover := strconv.FormatInt(v.CoverID, 10)
+			coverURL = "https://covers.openlibrary.org/b/id/" + cover + "-L.jpg"
+		} else {
+			coverURL = ""
+		}
 		book := domain.SearchBook{
 			OpenLibraryID: openLibID,
 			Title:         v.Title,
