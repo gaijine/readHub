@@ -33,6 +33,7 @@ func (c *Client) GetBookDetails(openLibraryID string) (domain.BookDetails, error
 	if err != nil {
 		return domain.BookDetails{}, err
 	}
+
 	var coverURL string
 	if len(response.Covers) == 0 {
 		coverURL = ""

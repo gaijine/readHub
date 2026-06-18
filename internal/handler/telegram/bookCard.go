@@ -49,6 +49,15 @@ func (h *Handler) buildBookKeyboard(userID int64, book domain.Book) tgbotapi.Inl
 	buttonUpdateProgress := tgbotapi.NewInlineKeyboardButtonData("📄 Обновить прогресс", "progress:"+strconv.FormatInt(book.ID, 10))
 	buttonDelete := tgbotapi.NewInlineKeyboardButtonData("🗑 Удалить", "delete:"+strconv.FormatInt(book.ID, 10))
 
+	if book.Status == domain.StatusCompleted {
+		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonWant})
+		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonReading})
+		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonCompleted})
+		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonUpdateProgress})
+		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonDelete})
+		return tgbotapi.NewInlineKeyboardMarkup(rows...)
+	}
+
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonWant})
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonReading})
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonCompleted})

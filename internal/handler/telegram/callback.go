@@ -241,6 +241,10 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 		err = h.sessionService.StartSession(bookID, user.ID)
 		if err != nil {
 			log.Println(err)
+
+			msg := tgbotapi.NewMessage(chatID, "❌ У вас уже есть активная сессия чтения")
+			_, _ = h.bot.Send(msg)
+
 			return
 		}
 
