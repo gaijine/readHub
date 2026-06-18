@@ -12,6 +12,7 @@ import (
 type SessionService interface {
 	StartSession(bookID, userID int64) error
 	FinishSession(userID int64) error
+	GetActiveSession(userID int64) (domain.ReadingSession, error)
 }
 
 type sessionService struct {
@@ -79,4 +80,12 @@ func (s *sessionService) FinishSession(userID int64) error {
 		}
 	}
 	return nil
+}
+
+func (s *sessionService) GetActiveSession(userID int64) (domain.ReadingSession, error) {
+	session, err := s.sessionRepo.GetActiveSession(userID)
+	if err != nil {
+		return domain.ReadingSession{}, err
+	}
+	return session, nil
 }

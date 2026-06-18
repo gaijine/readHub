@@ -31,19 +31,54 @@ func (h *Handler) buildBookCard(book domain.Book) string {
 	return builder.String()
 }
 
-func (h *Handler) buildBookKeyboard(bookID int64) tgbotapi.InlineKeyboardMarkup {
+func (h *Handler) buildBookKeyboard(userID int64, book domain.Book) tgbotapi.InlineKeyboardMarkup {
 	var rows [][]tgbotapi.InlineKeyboardButton
-	buttonWant := tgbotapi.NewInlineKeyboardButtonData("📚 Хочу", "status:want:"+strconv.FormatInt(bookID, 10))
-	buttonReading := tgbotapi.NewInlineKeyboardButtonData("📖 Читаю", "status:reading:"+strconv.FormatInt(bookID, 10))
-	buttonCompleted := tgbotapi.NewInlineKeyboardButtonData("✅ Прочитано", "status:completed:"+strconv.FormatInt(bookID, 10))
-	buttonUpdateProgress := tgbotapi.NewInlineKeyboardButtonData("📄 Обновить прогресс", "progress:"+strconv.FormatInt(bookID, 10))
-	buttonDelete := tgbotapi.NewInlineKeyboardButtonData("🗑 Удалить", "delete:"+strconv.FormatInt(bookID, 10))
+	var readingButton tgbotapi.InlineKeyboardButton
+
+	readingButton = tgbotapi.NewInlineKeyboardButtonData("▶ Начать чтение", "startsession:"+strconv.FormatInt(book.ID, 10))
+	session, err := h.sessionService.GetActiveSession(userID)
+	if err == nil {
+		if session.BookID == book.ID {
+			readingButton = tgbotapi.NewInlineKeyboardButtonData("⏹ Завершить чтение", "finishsession:"+strconv.FormatInt(book.ID, 10))
+		}
+	}
+
+	buttonWant := tgbotapi.NewInlineKeyboardButtonData("📚 Хочу", "status:want:"+strconv.FormatInt(book.ID, 10))
+	buttonReading := tgbotapi.NewInlineKeyboardButtonData("📖 Читаю", "status:reading:"+strconv.FormatInt(book.ID, 10))
+	buttonCompleted := tgbotapi.NewInlineKeyboardButtonData("✅ Прочитано", "status:completed:"+strconv.FormatInt(book.ID, 10))
+	buttonUpdateProgress := tgbotapi.NewInlineKeyboardButtonData("📄 Обновить прогресс", "progress:"+strconv.FormatInt(book.ID, 10))
+	buttonDelete := tgbotapi.NewInlineKeyboardButtonData("🗑 Удалить", "delete:"+strconv.FormatInt(book.ID, 10))
 
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonWant})
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonReading})
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonCompleted})
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonUpdateProgress})
+	rows = append(rows, []tgbotapi.InlineKeyboardButton{readingButton})
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonDelete})
 
 	return tgbotapi.NewInlineKeyboardMarkup(rows...)
+}
+
+func (h *Handler) updateBookCard(chatID int64, messageID int, book domain.Book) error {
+	text := h.buildBookCard(book)
+	keyboard := h.buildBookKeyboard(book.UserID, book)
+
+	if book.CoverURL == "" {
+		edit := tgbotapi.NewEditMessageText(chatID, messageID, text)
+		edit.ReplyMarkup = &keyboard
+
+		_, err := h.bot.Send(edit)
+		if err != nil {
+			return err
+		}
+	} else {
+		edit := tgbotapi.NewEditMessageCaption(chatID, messageID, text)
+		edit.ReplyMarkup = &keyboard
+
+		_, err := h.bot.Send(edit)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

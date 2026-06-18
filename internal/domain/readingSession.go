@@ -9,5 +9,5 @@ type ReadingSession struct {
 	StartedAt  time.Time
 	FinishedAt *time.Time
 	StartPage  int
-	EndPage    int
+	EndPage    *int
 }

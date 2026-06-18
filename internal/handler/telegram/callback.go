@@ -22,10 +22,6 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 	}
 
 	action := parts[0]
-	// data := parts[1]
-
-	// log.Println(action)
-	// log.Println(parts[1])
 
 	switch action {
 	case "details":
@@ -88,6 +84,7 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 		_, err = h.bot.Send(msg)
 		if err != nil {
 			log.Println(err)
+			return
 		}
 	case "mybook":
 		bookID, err := strconv.ParseInt(parts[1], 10, 64)
@@ -102,7 +99,7 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 		}
 
 		text := h.buildBookCard(book)
-		keyboard := h.buildBookKeyboard(bookID)
+		keyboard := h.buildBookKeyboard(book.UserID, book)
 
 		if book.CoverURL == "" {
 			msg := tgbotapi.NewMessage(chatID, text)
@@ -111,6 +108,7 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			_, err = h.bot.Send(msg)
 			if err != nil {
 				log.Println(err)
+				return
 			}
 		} else {
 			photo := tgbotapi.NewPhoto(chatID, tgbotapi.FileURL(book.CoverURL))
@@ -120,6 +118,7 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			_, err = h.bot.Send(photo)
 			if err != nil {
 				log.Println(err)
+				return
 			}
 		}
 	case "status":
@@ -148,15 +147,10 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			return
 		}
 
-		text := h.buildBookCard(book)
-		keyboard := h.buildBookKeyboard(bookID)
-
-		edit := tgbotapi.NewEditMessageCaption(chatID, messageID, text)
-		edit.ReplyMarkup = &keyboard
-
-		_, err = h.bot.Send(edit)
+		err = h.updateBookCard(chatID, messageID, book)
 		if err != nil {
 			log.Println(err)
+			return
 		}
 	case "delete":
 		bookID, err := strconv.ParseInt(parts[1], 10, 64)
@@ -204,6 +198,7 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 		_, err = h.bot.Send(msg)
 		if err != nil {
 			log.Println(err)
+			return
 		}
 	case "canceldelete":
 		deleteConfig := tgbotapi.NewDeleteMessage(chatID, messageID)
@@ -226,6 +221,65 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 
 		msg := tgbotapi.NewMessage(chatID, "Введите текущую страницу книги сообщением")
 		_, err = h.bot.Send(msg)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	case "startsession":
+		bookID, err := strconv.ParseInt(parts[1], 10, 64)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		user, err := h.bookService.GetUserByTelegramID(telegramID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		err = h.sessionService.StartSession(bookID, user.ID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		book, err := h.bookService.GetBookByID(bookID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		err = h.updateBookCard(chatID, messageID, book)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	case "finishsession":
+		user, err := h.bookService.GetUserByTelegramID(telegramID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		err = h.sessionService.FinishSession(user.ID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		bookID, err := strconv.ParseInt(parts[1], 10, 64)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		book, err := h.bookService.GetBookByID(bookID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		err = h.updateBookCard(chatID, messageID, book)
 		if err != nil {
 			log.Println(err)
 			return

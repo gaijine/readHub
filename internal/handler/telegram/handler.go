@@ -23,14 +23,16 @@ type Handler struct {
 	progressState map[int64]ProgressState       // будет хранится телеграм айди как ключь, айди книги и сообщения как значение, чтоб понимать у кого какую книгу обновлять
 	// для того чтоб после нажатия "обновить прогресс" в памяти сохранялось h.progressState[8798127434] = {3, 23}
 	// что значит Пользователь 8798127434 сейчас вводит прогресс для книги 3
+	sessionService service.SessionService
 }
 
-func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI) *Handler {
+func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI, sessionService service.SessionService) *Handler {
 	return &Handler{
-		bookService:   bookService,
-		bot:           bot,
-		searchCache:   make(map[int64][]domain.SearchBook),
-		progressState: make(map[int64]ProgressState),
+		bookService:    bookService,
+		bot:            bot,
+		searchCache:    make(map[int64][]domain.SearchBook),
+		progressState:  make(map[int64]ProgressState),
+		sessionService: sessionService,
 	}
 }
 
@@ -62,7 +64,11 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 		page, err := strconv.Atoi(text)
 		if err != nil {
 			msg := tgbotapi.NewMessage(chatID, "Введите число")
-			_, _ = h.bot.Send(msg)
+			_, err = h.bot.Send(msg)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 			return
 		}
 
@@ -76,7 +82,11 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 			log.Println(err)
 
 			msg := tgbotapi.NewMessage(chatID, err.Error())
-			_, _ = h.bot.Send(msg)
+			_, err = h.bot.Send(msg)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 
 			return
 		}
@@ -87,15 +97,10 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 			return
 		}
 
-		text := h.buildBookCard(book)
-		keyboard := h.buildBookKeyboard(state.BookID)
-
-		edit := tgbotapi.NewEditMessageCaption(chatID, state.MessageID, text)
-		edit.ReplyMarkup = &keyboard
-
-		_, err = h.bot.Send(edit)
+		err = h.updateBookCard(chatID, state.MessageID, book)
 		if err != nil {
 			log.Println(err)
+			return
 		}
 
 		delete(h.progressState, telegramID) // удаляем состояние из мапы (очищаем)
