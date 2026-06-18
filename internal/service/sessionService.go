@@ -36,6 +36,9 @@ func (s *sessionService) StartSession(bookID, userID int64) error {
 		if err != nil {
 			return err
 		}
+		if book.Status == domain.StatusCompleted {
+			return ErrBookAlreadyCompleted
+		}
 
 		err = s.sessionRepo.CreateSession(userID, bookID, book.CurrentPage)
 		if err != nil {
@@ -56,7 +59,7 @@ func (s *sessionService) FinishSession(userID int64) error {
 	if errors.Is(err, pgx.ErrNoRows) { // активной сессии нет
 		return ErrActiveSessionNotFound
 	}
-	if err != nil { // другая ошибка соединение потеряно, бд недоступна, ошибка скьюл
+	if err != nil { // другая ошибка соединение потеряно, бд недоступна, ошибка SQL
 		return err
 	}
 
@@ -68,6 +71,12 @@ func (s *sessionService) FinishSession(userID int64) error {
 	err = s.sessionRepo.FinishSession(session.ID, book.CurrentPage)
 	if err != nil {
 		return err
+	}
+	if book.TotalPages > 0 && book.CurrentPage == book.TotalPages {
+		err = s.bookService.UpdateStatus(userID, book.ID, domain.StatusCompleted)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
