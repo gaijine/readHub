@@ -7,7 +7,7 @@ type ReadingSession struct {
 	BookID     int64
 	UserID     int64
 	StartedAt  time.Time
-	FinishedAt time.Time
+	FinishedAt *time.Time
 	StartPage  int
 	EndPage    int
 }
