@@ -87,7 +87,18 @@ func (r *PostgresBookRepository) UpdateCurrentPage(bookID int64, page int) error
 	if err != nil {
 		return err
 	}
+	return nil
+}
 
+func (r *PostgresBookRepository) UpdateTotalPages(bookID int64, totalPages int) error {
+	_, err := r.db.Exec(context.Background(),
+		"UPDATE books SET total_pages=$2 WHERE id=$1",
+		bookID,
+		totalPages,
+	)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

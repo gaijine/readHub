@@ -19,6 +19,7 @@ type BookService interface {
 	GetUserByTelegramID(telegramID int64) (domain.User, error)
 	CreateUser(user domain.User) error
 	GetBookByID(bookID int64) (domain.Book, error)
+	UpdateTotalPages(userID, bookID int64, totalPages int) error
 }
 
 type bookService struct {
@@ -196,4 +197,29 @@ func (b *bookService) GetBookByID(bookID int64) (domain.Book, error) {
 		return domain.Book{}, err
 	}
 	return book, nil
+}
+
+func (b *bookService) UpdateTotalPages(userID, bookID int64, totalPages int) error {
+	book, err := b.bookRepo.GetByID(bookID)
+	if err != nil {
+		return err
+	}
+
+	if book.UserID != userID {
+		return ErrBookNotOwned
+	}
+
+	if totalPages <= 0 {
+		return ErrInvalidTotalPages
+	}
+
+	if totalPages < book.CurrentPage {
+		return ErrTotalPagesLessThanCurrentPage
+	}
+
+	err = b.bookRepo.UpdateTotalPages(bookID, totalPages)
+	if err != nil {
+		return err
+	}
+	return nil
 }

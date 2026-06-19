@@ -288,6 +288,25 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			log.Println(err)
 			return
 		}
+	case "setpages":
+		bookID, err := strconv.ParseInt(parts[1], 10, 64)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		h.pagesState[telegramID] = PagesState{
+			BookID:    bookID,
+			MessageID: messageID,
+		}
+
+		msg := tgbotapi.NewMessage(chatID, "Введите количество страниц в книге")
+		_, err = h.bot.Send(msg)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
 	case "back":
 
 	}

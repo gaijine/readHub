@@ -11,6 +11,11 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+type PagesState struct {
+	BookID    int64
+	MessageID int
+}
+
 type ProgressState struct {
 	BookID    int64
 	MessageID int
@@ -24,6 +29,7 @@ type Handler struct {
 	// для того чтоб после нажатия "обновить прогресс" в памяти сохранялось h.progressState[8798127434] = {3, 23}
 	// что значит Пользователь 8798127434 сейчас вводит прогресс для книги 3
 	sessionService service.SessionService
+	pagesState     map[int64]PagesState
 }
 
 func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI, sessionService service.SessionService) *Handler {
@@ -33,6 +39,7 @@ func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI, sessionSe
 		searchCache:    make(map[int64][]domain.SearchBook),
 		progressState:  make(map[int64]ProgressState),
 		sessionService: sessionService,
+		pagesState:     make(map[int64]PagesState),
 	}
 }
 
@@ -104,6 +111,48 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 		}
 
 		delete(h.progressState, telegramID) // удаляем состояние из мапы (очищаем)
+
+		return
+	}
+
+	statePage, exists := h.pagesState[telegramID]
+	if exists {
+		totalPage, err := strconv.Atoi(text)
+		if err != nil {
+			msg := tgbotapi.NewMessage(chatID, "Введите число")
+			_, err = h.bot.Send(msg)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			return
+		}
+
+		user, err := h.bookService.GetUserByTelegramID(telegramID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		err = h.bookService.UpdateTotalPages(user.ID, statePage.BookID, totalPage)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		book, err := h.bookService.GetBookByID(statePage.BookID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		err = h.updateBookCard(chatID, statePage.MessageID, book)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		delete(h.pagesState, telegramID)
 
 		return
 	}

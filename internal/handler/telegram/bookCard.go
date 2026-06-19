@@ -48,12 +48,12 @@ func (h *Handler) buildBookKeyboard(userID int64, book domain.Book) tgbotapi.Inl
 	buttonCompleted := tgbotapi.NewInlineKeyboardButtonData("✅ Прочитано", "status:completed:"+strconv.FormatInt(book.ID, 10))
 	buttonUpdateProgress := tgbotapi.NewInlineKeyboardButtonData("📄 Обновить прогресс", "progress:"+strconv.FormatInt(book.ID, 10))
 	buttonDelete := tgbotapi.NewInlineKeyboardButtonData("🗑 Удалить", "delete:"+strconv.FormatInt(book.ID, 10))
+	setPagesButton := tgbotapi.NewInlineKeyboardButtonData("📚 Указать страницы", "setpages:"+strconv.FormatInt(book.ID, 10))
 
 	if book.Status == domain.StatusCompleted {
 		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonWant})
 		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonReading})
 		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonCompleted})
-		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonUpdateProgress})
 		rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonDelete})
 		return tgbotapi.NewInlineKeyboardMarkup(rows...)
 	}
@@ -61,6 +61,7 @@ func (h *Handler) buildBookKeyboard(userID int64, book domain.Book) tgbotapi.Inl
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonWant})
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonReading})
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonCompleted})
+	rows = append(rows, []tgbotapi.InlineKeyboardButton{setPagesButton})
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonUpdateProgress})
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{readingButton})
 	rows = append(rows, []tgbotapi.InlineKeyboardButton{buttonDelete})
