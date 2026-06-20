@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"readHub/internal/domain"
 
@@ -68,6 +69,7 @@ func (r *PostgresSessionRepository) CountByUserID(userID int64) (int, error) {
 }
 
 func (r *PostgresSessionRepository) GetPagesRead(userID int64) (int, error) {
+	// считает сумму (если пришло 0 строк результатом sum будет null), если значение будет нил то coalesce нил заменит на 0, без этой функции sql запрос вернул бы не 0 а null
 	var count int
 	err := r.db.QueryRow(context.Background(),
 		"SELECT COALESCE(SUM(end_page - start_page), 0) FROM reading_sessions WHERE user_id=$1 AND end_page IS NOT NULL",
@@ -110,4 +112,8 @@ LIMIT 10`,
 		return nil, err
 	}
 	return sessionsRow, nil
+}
+
+func (r *PostgresSessionRepository) GetTotalReadingTime(userID int64) (time.Duration, error) {
+	return time.Duration(0), nil
 }

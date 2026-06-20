@@ -1,6 +1,8 @@
 package repository
 
-import "readHub/internal/domain"
+import (
+	"readHub/internal/domain"
+)
 
 type SessionRepository interface {
 	CreateSession(userID, bookID int64, startPage int) error
@@ -9,6 +11,7 @@ type SessionRepository interface {
 
 	CountByUserID(userID int64) (int, error)
 	GetPagesRead(userID int64) (int, error)
+	// GetTotalReadingTime(userID int64) (time.Duration, error)
 
 	GetListSessions(userID int64) ([]domain.SessionHistoryRow, error)
 }

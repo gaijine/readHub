@@ -1,6 +1,8 @@
 package service
 
 import (
+	"time"
+
 	"readHub/internal/domain"
 	"readHub/internal/repository"
 )
@@ -24,7 +26,9 @@ func NewStatsService(bookRepo repository.BookRepository, sessionRepo repository.
 func (s *statsService) GetStats(userID int64) (domain.ReadingStats, error) {
 	var (
 		completionRate int
-		average        int
+		averagePage    int
+		averageSession time.Duration
+		totalDuration  time.Duration
 	)
 
 	totalBooks, err := s.bookRepo.CountByUserID(userID)
@@ -52,12 +56,26 @@ func (s *statsService) GetStats(userID int64) (domain.ReadingStats, error) {
 		return domain.ReadingStats{}, err
 	}
 
+	sessionsRow, err := s.sessionRepo.GetListSessions(userID)
+	if err != nil {
+		return domain.ReadingStats{}, err
+	}
+
+	for _, v := range sessionsRow {
+		duration := v.FinishedAt.Sub(v.StartedAt)
+		totalDuration += duration
+	}
+
+	if totalSessions > 0 {
+		averageSession = totalDuration / time.Duration(totalSessions)
+	}
+
 	if totalBooks > 0 {
 		completionRate = completedBooks * 100 / totalBooks
 	}
 
 	if totalSessions > 0 {
-		average = pagesRead / totalSessions
+		averagePage = pagesRead / totalSessions
 	}
 
 	stats := domain.ReadingStats{
@@ -67,7 +85,9 @@ func (s *statsService) GetStats(userID int64) (domain.ReadingStats, error) {
 		TotalSessions:          totalSessions,
 		PagesRead:              pagesRead,
 		CompletionRate:         completionRate,
-		AveragePagesPerSession: average,
+		AveragePagesPerSession: averagePage,
+		TotalReadingTime:       totalDuration,
+		AverageSessionDuration: averageSession,
 	}
 
 	return stats, nil

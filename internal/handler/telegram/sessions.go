@@ -38,9 +38,22 @@ func (h *Handler) handleSessions(chatID, telegramID int64) {
 		builder.WriteString("📄 ")
 		builder.WriteString(strconv.Itoa(v.PagesRead))
 		builder.WriteString(" стр.\n")
-		builder.WriteString("⏱ ")
-		builder.WriteString(strconv.Itoa(int(v.Duration.Minutes())))
-		builder.WriteString(" мин\n")
+
+		totalMinutes := int(v.Duration.Minutes())
+		hours := totalMinutes / 60
+		minutes := totalMinutes % 60
+		if hours > 0 {
+			builder.WriteString("⏱ ")
+			builder.WriteString(strconv.Itoa(hours))
+			builder.WriteString(" ч ")
+			builder.WriteString(strconv.Itoa(minutes))
+			builder.WriteString(" мин\n")
+		} else {
+			builder.WriteString("⏱ ")
+			builder.WriteString(strconv.Itoa(minutes))
+			builder.WriteString(" мин\n")
+		}
+
 		builder.WriteString("📅 ")
 		builder.WriteString(v.Date.Format("02.01.2006"))
 		builder.WriteString("\n\n")
