@@ -54,3 +54,27 @@ func (r *PostgresSessionRepository) GetActiveSession(userID int64) (domain.Readi
 	}
 	return session, nil
 }
+
+func (r *PostgresSessionRepository) CountByUserID(userID int64) (int, error) {
+	var count int
+	err := r.db.QueryRow(context.Background(),
+		"SELECT COUNT(*) FROM reading_sessions WHERE user_id=$1",
+		userID,
+	).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (r *PostgresSessionRepository) GetPagesRead(userID int64) (int, error) {
+	var count int
+	err := r.db.QueryRow(context.Background(),
+		"SELECT COALESCE(SUM(end_page - start_page), 0) FROM reading_sessions WHERE user_id=$1 AND end_page IS NOT NULL",
+		userID,
+	).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}

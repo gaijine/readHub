@@ -59,5 +59,6 @@ func (h *Handler) handleMyBooks(chatID, telegramID int64) {
 	_, err = h.bot.Send(msg)
 	if err != nil {
 		log.Println(err)
+		return
 	}
 }

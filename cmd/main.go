@@ -27,18 +27,19 @@ func main() {
 	log.Println("database connected")
 
 	bookRepo := postgres.NewBookRepository(db) // репозиторий книг, для работы с БД PostgreSQL
-	userRepo := postgres.NewUserRepository(db)
-	sessionRepo := postgres.NewSessionRepository(db)                      // репозиторий пользователей
+	userRepo := postgres.NewUserRepository(db) // репозиторий пользователей
+	sessionRepo := postgres.NewSessionRepository(db)
 	openLib := openlibrary.NewClient()                                    // клиент для работы с внешним openLibrary API
 	bookService := service.NewBookService(bookRepo, userRepo, openLib)    // сервис бизнес-логики книг
 	sessionService := service.NewSessionService(sessionRepo, bookService) // сервис сессий чтения
+	statsService := service.NewStatsService(bookRepo, sessionRepo)
 
 	bot, err := tgbotapi.NewBotAPI(cfg.BotToken)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	handler := telegram.NewHandler(bookService, bot, sessionService)
+	handler := telegram.NewHandler(bookService, bot, sessionService, statsService)
 
 	handler.Run()
 	// client.SearchBooks("Alice")

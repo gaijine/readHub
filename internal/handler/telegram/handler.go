@@ -30,9 +30,10 @@ type Handler struct {
 	// что значит Пользователь 8798127434 сейчас вводит прогресс для книги 3
 	sessionService service.SessionService
 	pagesState     map[int64]PagesState
+	statsService   service.StatsService
 }
 
-func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI, sessionService service.SessionService) *Handler {
+func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI, sessionService service.SessionService, statsService service.StatsService) *Handler {
 	return &Handler{
 		bookService:    bookService,
 		bot:            bot,
@@ -40,6 +41,7 @@ func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI, sessionSe
 		progressState:  make(map[int64]ProgressState),
 		sessionService: sessionService,
 		pagesState:     make(map[int64]PagesState),
+		statsService:   statsService,
 	}
 }
 
@@ -173,5 +175,7 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 		h.handleSearch(chatID, telegramID, query)
 	case "/mybooks":
 		h.handleMyBooks(chatID, telegramID)
+	case "/stats":
+		h.handleStats(chatID, telegramID)
 	}
 }

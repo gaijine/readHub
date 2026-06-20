@@ -115,6 +115,31 @@ func (r *PostgresBookRepository) UpdateStatus(bookID int64, status domain.BookSt
 	return nil
 }
 
+func (r *PostgresBookRepository) CountByUserID(userID int64) (int, error) {
+	var count int
+	err := r.db.QueryRow(context.Background(),
+		"SELECT COUNT(*) FROM books WHERE user_id=$1",
+		userID,
+	).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (r *PostgresBookRepository) CountByStatus(userID int64, status domain.BookStatus) (int, error) {
+	var count int
+	err := r.db.QueryRow(context.Background(),
+		"SELECT COUNT(*) FROM books WHERE user_id=$1 AND status=$2",
+		userID,
+		status,
+	).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (r *PostgresBookRepository) Delete(bookID int64) error {
 	_, err := r.db.Exec(context.Background(),
 		"DELETE FROM books WHERE id=$1",
