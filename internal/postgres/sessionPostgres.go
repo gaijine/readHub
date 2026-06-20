@@ -78,3 +78,36 @@ func (r *PostgresSessionRepository) GetPagesRead(userID int64) (int, error) {
 	}
 	return count, nil
 }
+
+func (r *PostgresSessionRepository) GetListSessions(userID int64) ([]domain.SessionHistoryRow, error) {
+	var sessionsRow []domain.SessionHistoryRow
+
+	rows, err := r.db.Query(context.Background(),
+		`SELECT books.title, reading_sessions.start_page, reading_sessions.end_page, reading_sessions.started_at, reading_sessions.finished_at
+FROM books
+INNER JOIN reading_sessions ON books.id=reading_sessions.book_id 
+WHERE reading_sessions.user_id=$1
+AND reading_sessions.finished_at IS NOT NULL
+ORDER BY reading_sessions.started_at DESC
+LIMIT 10`,
+		userID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var row domain.SessionHistoryRow
+		err = rows.Scan(&row.BookTitle, &row.StartPage, &row.EndPage, &row.StartedAt, &row.FinishedAt)
+		if err != nil {
+			return nil, err
+		}
+		sessionsRow = append(sessionsRow, row)
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return sessionsRow, nil
+}

@@ -9,4 +9,6 @@ type SessionRepository interface {
 
 	CountByUserID(userID int64) (int, error)
 	GetPagesRead(userID int64) (int, error)
+
+	GetListSessions(userID int64) ([]domain.SessionHistoryRow, error)
 }

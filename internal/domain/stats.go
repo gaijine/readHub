@@ -1,9 +1,11 @@
 package domain
 
 type ReadingStats struct {
-	TotalBooks     int
-	CompletedBooks int
-	ReadingBooks   int
-	TotalSessions  int
-	PagesRead      int
+	TotalBooks             int
+	CompletedBooks         int
+	ReadingBooks           int
+	TotalSessions          int
+	PagesRead              int
+	CompletionRate         int
+	AveragePagesPerSession int
 }

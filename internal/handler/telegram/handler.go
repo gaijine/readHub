@@ -177,5 +177,7 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 		h.handleMyBooks(chatID, telegramID)
 	case "/stats":
 		h.handleStats(chatID, telegramID)
+	case "/sessions":
+		h.handleSessions(chatID, telegramID)
 	}
 }

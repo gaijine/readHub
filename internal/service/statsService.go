@@ -22,6 +22,11 @@ func NewStatsService(bookRepo repository.BookRepository, sessionRepo repository.
 }
 
 func (s *statsService) GetStats(userID int64) (domain.ReadingStats, error) {
+	var (
+		completionRate int
+		average        int
+	)
+
 	totalBooks, err := s.bookRepo.CountByUserID(userID)
 	if err != nil {
 		return domain.ReadingStats{}, err
@@ -47,12 +52,22 @@ func (s *statsService) GetStats(userID int64) (domain.ReadingStats, error) {
 		return domain.ReadingStats{}, err
 	}
 
+	if totalBooks > 0 {
+		completionRate = completedBooks * 100 / totalBooks
+	}
+
+	if totalSessions > 0 {
+		average = pagesRead / totalSessions
+	}
+
 	stats := domain.ReadingStats{
-		TotalBooks:     totalBooks,
-		CompletedBooks: completedBooks,
-		ReadingBooks:   readingBooks,
-		TotalSessions:  totalSessions,
-		PagesRead:      pagesRead,
+		TotalBooks:             totalBooks,
+		CompletedBooks:         completedBooks,
+		ReadingBooks:           readingBooks,
+		TotalSessions:          totalSessions,
+		PagesRead:              pagesRead,
+		CompletionRate:         completionRate,
+		AveragePagesPerSession: average,
 	}
 
 	return stats, nil

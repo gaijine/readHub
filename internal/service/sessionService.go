@@ -13,6 +13,7 @@ type SessionService interface {
 	StartSession(bookID, userID int64) error
 	FinishSession(userID int64) error
 	GetActiveSession(userID int64) (domain.ReadingSession, error)
+	GetSessionHistory(userID int64) ([]domain.SessionHistory, error)
 }
 
 type sessionService struct {
@@ -88,4 +89,26 @@ func (s *sessionService) GetActiveSession(userID int64) (domain.ReadingSession, 
 		return domain.ReadingSession{}, err
 	}
 	return session, nil
+}
+
+func (s *sessionService) GetSessionHistory(userID int64) ([]domain.SessionHistory, error) {
+	var sessions []domain.SessionHistory
+	sessionRow, err := s.sessionRepo.GetListSessions(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range sessionRow {
+		pagesRead := v.EndPage - v.StartPage
+		duration := v.FinishedAt.Sub(v.StartedAt) // находит разницу, разность времени
+
+		session := domain.SessionHistory{
+			BookTitle: v.BookTitle,
+			PagesRead: pagesRead,
+			Duration:  duration,
+			Date:      v.StartedAt,
+		}
+		sessions = append(sessions, session)
+	}
+	return sessions, nil
 }
