@@ -8,14 +8,14 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func (h *Handler) handleSearch(chatID, telegramID int64, query string) {
+func (h *Handler) handleSearch(chatID, telegramID int64, query string) bool {
 	if query == "" {
 		msg := tgbotapi.NewMessage(chatID, "Использование:\n/search Название книги")
 		_, err := h.bot.Send(msg)
 		if err != nil {
 			log.Println(err)
 		}
-		return
+		return false
 	}
 
 	books, err := h.bookService.SearchBooks(query)
@@ -26,15 +26,15 @@ func (h *Handler) handleSearch(chatID, telegramID int64, query string) {
 		if err != nil {
 			log.Println(err)
 		}
-		return
+		return false
 	}
 	if len(books) == 0 {
-		msg := tgbotapi.NewMessage(chatID, "По вашему запросу ничего не найдено")
+		msg := tgbotapi.NewMessage(chatID, "По вашему запросу ничего не найдено,\nВведите другое название книги или автора ")
 		_, err = h.bot.Send(msg)
 		if err != nil {
 			log.Println(err)
 		}
-		return
+		return false
 	}
 
 	if len(books) > 5 { // если книг будет больше 5
@@ -80,4 +80,5 @@ func (h *Handler) handleSearch(chatID, telegramID int64, query string) {
 	if err != nil {
 		log.Println(err)
 	}
+	return true
 }

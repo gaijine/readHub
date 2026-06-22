@@ -11,6 +11,8 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+type SearchState struct{}
+
 type PagesState struct {
 	BookID    int64
 	MessageID int
@@ -31,6 +33,7 @@ type Handler struct {
 	sessionService service.SessionService
 	pagesState     map[int64]PagesState
 	statsService   service.StatsService
+	searchState    map[int64]SearchState
 }
 
 func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI, sessionService service.SessionService, statsService service.StatsService) *Handler {
@@ -42,6 +45,7 @@ func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI, sessionSe
 		sessionService: sessionService,
 		pagesState:     make(map[int64]PagesState),
 		statsService:   statsService,
+		searchState:    make(map[int64]SearchState),
 	}
 }
 
@@ -156,6 +160,37 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 
 		delete(h.pagesState, telegramID)
 
+		return
+	}
+
+	_, exists = h.searchState[telegramID]
+	if exists {
+		found := h.handleSearch(chatID, telegramID, text)
+		if found {
+			delete(h.searchState, telegramID)
+		}
+		return
+	}
+
+	switch text {
+	case "🔍 Поиск книги":
+		h.searchState[telegramID] = SearchState{}
+
+		msg := tgbotapi.NewMessage(chatID, "Введите название книги или автора")
+		_, err := h.bot.Send(msg)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		return
+	case "📚 Мои книги":
+		h.handleMyBooks(chatID, telegramID)
+		return
+	case "📊 Статистика":
+		h.handleStats(chatID, telegramID)
+		return
+	case "📖 История":
+		h.handleSessions(chatID, telegramID)
 		return
 	}
 

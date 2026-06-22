@@ -33,6 +33,8 @@ func (h *Handler) handleStart(chatID, telegramID int64, username string) {
 	}
 
 	msg := tgbotapi.NewMessage(chatID, startMessage)
+	keyboard := h.buildMainMenu()
+	msg.ReplyMarkup = keyboard
 
 	_, err = h.bot.Send(msg)
 	if err != nil {
