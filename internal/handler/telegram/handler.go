@@ -11,16 +11,27 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+type LibraryState struct {
+	MessageID int
+	Page      int
+}
+
+type DeleteState struct {
+	SentMessageID int
+}
+
 type SearchState struct{}
 
 type PagesState struct {
-	BookID    int64
-	MessageID int
+	BookID        int64
+	MessageID     int // айди карточки книги
+	SentMessageID int // айди сообщения которое отправляем пользователю
 }
 
 type ProgressState struct {
-	BookID    int64
-	MessageID int
+	BookID        int64
+	MessageID     int
+	SentMessageID int
 }
 
 type Handler struct {
@@ -34,6 +45,8 @@ type Handler struct {
 	pagesState     map[int64]PagesState
 	statsService   service.StatsService
 	searchState    map[int64]SearchState
+	deleteState    map[int64]DeleteState
+	libraryState   map[int64]LibraryState
 }
 
 func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI, sessionService service.SessionService, statsService service.StatsService) *Handler {
@@ -46,6 +59,8 @@ func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI, sessionSe
 		pagesState:     make(map[int64]PagesState),
 		statsService:   statsService,
 		searchState:    make(map[int64]SearchState),
+		deleteState:    make(map[int64]DeleteState),
+		libraryState:   make(map[int64]LibraryState),
 	}
 }
 
@@ -116,6 +131,18 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 			return
 		}
 
+		deleteConfig := tgbotapi.NewDeleteMessage(chatID, state.SentMessageID)
+		_, err = h.bot.Request(deleteConfig)
+		if err != nil {
+			log.Printf("Ошибка удаления сообщения: %v", err)
+		}
+
+		deleteConfig1 := tgbotapi.NewDeleteMessage(chatID, update.Message.MessageID)
+		_, err = h.bot.Request(deleteConfig1)
+		if err != nil {
+			log.Printf("Ошибка удаления сообщения: %v", err)
+		}
+
 		delete(h.progressState, telegramID) // удаляем состояние из мапы (очищаем)
 
 		return
@@ -156,6 +183,17 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 		if err != nil {
 			log.Println(err)
 			return
+		}
+
+		deleteConfig := tgbotapi.NewDeleteMessage(chatID, statePage.SentMessageID)
+		_, err = h.bot.Request(deleteConfig)
+		if err != nil {
+			log.Printf("Ошибка удаления сообщения: %v", err)
+		}
+		deleteConfig1 := tgbotapi.NewDeleteMessage(chatID, update.Message.MessageID)
+		_, err = h.bot.Request(deleteConfig1)
+		if err != nil {
+			log.Printf("Ошибка удаления сообщения: %v", err)
 		}
 
 		delete(h.pagesState, telegramID)

@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"time"
 
 	"readHub/internal/domain"
 
@@ -112,8 +111,4 @@ LIMIT 10`,
 		return nil, err
 	}
 	return sessionsRow, nil
-}
-
-func (r *PostgresSessionRepository) GetTotalReadingTime(userID int64) (time.Duration, error) {
-	return time.Duration(0), nil
 }

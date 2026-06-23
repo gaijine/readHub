@@ -41,7 +41,7 @@ func (r *PostgresBookRepository) GetByID(bookID int64) (domain.Book, error) {
 	var book domain.Book
 	// для записи одной строки берется QueryRow, и err здесь возвращает не queryrow а Scan
 	err := r.db.QueryRow(context.Background(),
-		"SELECT id, user_id, open_library_id, title, author, total_pages, current_page, status, cover_url, created_at FROM books WHERE id=$1",
+		"SELECT id, user_id, open_library_id, title, author, total_pages, current_page, status, cover_url, created_at FROM books WHERE id=$1 AND is_active=true",
 		bookID,
 	).Scan(&book.ID, &book.UserID, &book.OpenLibraryID, &book.Title, &book.Author, &book.TotalPages, &book.CurrentPage, &book.Status, &book.CoverURL, &book.CreatedAt)
 	if err != nil {
@@ -54,7 +54,7 @@ func (r *PostgresBookRepository) GetByUserID(userID int64) ([]domain.Book, error
 	var books []domain.Book
 	// Query нужен для записи нескольких строк, слайса данных так сказать
 	rows, err := r.db.Query(context.Background(),
-		"SELECT id, user_id, open_library_id, title, author, total_pages, current_page, status, cover_url, created_at FROM books WHERE user_id=$1",
+		"SELECT id, user_id, open_library_id, title, author, total_pages, current_page, status, cover_url, created_at FROM books WHERE user_id=$1 AND is_active=true",
 		userID,
 	)
 	if err != nil {
@@ -80,7 +80,7 @@ func (r *PostgresBookRepository) GetByUserID(userID int64) ([]domain.Book, error
 
 func (r *PostgresBookRepository) UpdateCurrentPage(bookID int64, page int) error {
 	_, err := r.db.Exec(context.Background(),
-		"UPDATE books SET current_page=$2 WHERE id=$1",
+		"UPDATE books SET current_page=$2 WHERE id=$1 AND is_active=true",
 		bookID,
 		page,
 	)
@@ -92,7 +92,7 @@ func (r *PostgresBookRepository) UpdateCurrentPage(bookID int64, page int) error
 
 func (r *PostgresBookRepository) UpdateTotalPages(bookID int64, totalPages int) error {
 	_, err := r.db.Exec(context.Background(),
-		"UPDATE books SET total_pages=$2 WHERE id=$1",
+		"UPDATE books SET total_pages=$2 WHERE id=$1 AND is_active=true",
 		bookID,
 		totalPages,
 	)
@@ -104,7 +104,7 @@ func (r *PostgresBookRepository) UpdateTotalPages(bookID int64, totalPages int) 
 
 func (r *PostgresBookRepository) UpdateStatus(bookID int64, status domain.BookStatus) error {
 	_, err := r.db.Exec(context.Background(),
-		"UPDATE books SET status=$2 WHERE id=$1",
+		"UPDATE books SET status=$2 WHERE id=$1 AND is_active=true",
 		bookID,
 		status,
 	)
@@ -118,7 +118,7 @@ func (r *PostgresBookRepository) UpdateStatus(bookID int64, status domain.BookSt
 func (r *PostgresBookRepository) CountByUserID(userID int64) (int, error) {
 	var count int
 	err := r.db.QueryRow(context.Background(),
-		"SELECT COUNT(*) FROM books WHERE user_id=$1",
+		"SELECT COUNT(*) FROM books WHERE user_id=$1 AND is_active=true",
 		userID,
 	).Scan(&count)
 	if err != nil {
@@ -130,7 +130,7 @@ func (r *PostgresBookRepository) CountByUserID(userID int64) (int, error) {
 func (r *PostgresBookRepository) CountByStatus(userID int64, status domain.BookStatus) (int, error) {
 	var count int
 	err := r.db.QueryRow(context.Background(),
-		"SELECT COUNT(*) FROM books WHERE user_id=$1 AND status=$2",
+		"SELECT COUNT(*) FROM books WHERE user_id=$1 AND status=$2 AND is_active=true",
 		userID,
 		status,
 	).Scan(&count)
@@ -142,7 +142,7 @@ func (r *PostgresBookRepository) CountByStatus(userID int64, status domain.BookS
 
 func (r *PostgresBookRepository) Delete(bookID int64) error {
 	_, err := r.db.Exec(context.Background(),
-		"DELETE FROM books WHERE id=$1",
+		"UPDATE books SET is_active=false WHERE id=$1 ",
 		bookID,
 	)
 	if err != nil {

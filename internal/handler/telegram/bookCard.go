@@ -29,7 +29,11 @@ func (h *Handler) buildBookCard(book domain.Book) string {
 		builder.WriteString(strconv.Itoa(book.CurrentPage))
 		builder.WriteString(" / ")
 		builder.WriteString(strconv.Itoa(book.TotalPages))
-		builder.WriteString(" (" + strconv.Itoa(percent) + "%)")
+		builder.WriteString("\n")
+		builder.WriteString("📈 ")
+		builder.WriteString(" (")
+		builder.WriteString(strconv.Itoa(percent))
+		builder.WriteString("%)")
 	} else {
 		builder.WriteString("📄 Прогресс:     ")
 		builder.WriteString(strconv.Itoa(book.CurrentPage))

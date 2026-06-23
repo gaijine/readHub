@@ -2,8 +2,11 @@ package telegram
 
 import (
 	"log"
+	"math"
 	"strconv"
 	"strings"
+
+	"readHub/internal/domain"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -30,8 +33,33 @@ func (h *Handler) handleSessions(chatID, telegramID int64) {
 		return
 	}
 
+	text, keyboard := h.buildSessionsPage(sessions, 0)
+
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ReplyMarkup = keyboard
+
+	_, err = h.bot.Send(msg)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
+
+func (h *Handler) buildSessionsPage(sessions []domain.SessionHistory, page int) (string, tgbotapi.InlineKeyboardMarkup) {
+	pageSize := 5
+	totalPages := int(math.Ceil(float64(len(sessions)) / float64(pageSize)))
+	start := page * pageSize
+	end := start + pageSize
+	if end > len(sessions) {
+		end = len(sessions)
+	}
+	pageSession := sessions[start:end]
+
 	var builder strings.Builder
-	for _, v := range sessions {
+	var buttons []tgbotapi.InlineKeyboardButton
+	var rows [][]tgbotapi.InlineKeyboardButton
+
+	for _, v := range pageSession {
 		builder.WriteString("📖 ")
 		builder.WriteString(v.BookTitle)
 		builder.WriteString("\n")
@@ -59,10 +87,23 @@ func (h *Handler) handleSessions(chatID, telegramID int64) {
 		builder.WriteString("\n\n")
 	}
 
-	msg := tgbotapi.NewMessage(chatID, builder.String())
-	_, err = h.bot.Send(msg)
-	if err != nil {
-		log.Println(err)
-		return
+	if totalPages > 1 {
+		if page > 0 {
+			buttonBack := tgbotapi.NewInlineKeyboardButtonData("⬅️", "sessions:page:"+strconv.Itoa(page-1))
+			buttons = append(buttons, buttonBack)
+		}
+
+		pageButton := tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(page+1)+"/"+strconv.Itoa(totalPages), "noop") // noop- no operations
+		buttons = append(buttons, pageButton)
+
+		if page < totalPages-1 {
+			buttonNext := tgbotapi.NewInlineKeyboardButtonData("➡️", "sessions:page:"+strconv.Itoa(page+1))
+			buttons = append(buttons, buttonNext)
+		}
+		rows = append(rows, buttons)
 	}
+
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(rows...)
+
+	return builder.String(), keyboard
 }

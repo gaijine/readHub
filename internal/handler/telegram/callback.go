@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"log"
+	"math"
 	"strconv"
 	"strings"
 
@@ -86,6 +87,14 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			log.Println(err)
 			return
 		}
+	case "back":
+		deleteConfig := tgbotapi.NewDeleteMessage(chatID, messageID)
+
+		_, err := h.bot.Request(deleteConfig)
+		if err != nil {
+			log.Printf("Ошибка удаления сообщения: %v", err)
+			return
+		}
 	case "mybook":
 		bookID, err := strconv.ParseInt(parts[1], 10, 64)
 		if err != nil {
@@ -101,11 +110,12 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 		text := h.buildBookCard(book)
 		keyboard := h.buildBookKeyboard(book.UserID, book)
 
+		var sentMessage tgbotapi.Message
 		if book.CoverURL == "" {
 			msg := tgbotapi.NewMessage(chatID, text)
 			msg.ReplyMarkup = keyboard
 
-			_, err = h.bot.Send(msg)
+			sentMessage, err = h.bot.Send(msg)
 			if err != nil {
 				log.Println(err)
 				return
@@ -115,12 +125,17 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			photo.Caption = text
 			photo.ReplyMarkup = keyboard
 
-			_, err = h.bot.Send(photo)
+			sentMessage, err = h.bot.Send(photo)
 			if err != nil {
 				log.Println(err)
 				return
 			}
 		}
+
+		h.deleteState[telegramID] = DeleteState{
+			SentMessageID: sentMessage.MessageID,
+		}
+
 	case "status":
 		user, err := h.bookService.GetUserByTelegramID(telegramID)
 		if err != nil {
@@ -194,6 +209,53 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			return
 		}
 
+		deleteConfig := tgbotapi.NewDeleteMessage(chatID, messageID)
+
+		_, err = h.bot.Request(deleteConfig)
+		if err != nil {
+			log.Printf("Ошибка удаления сообщения: %v", err)
+			return
+		}
+
+		state, exist := h.deleteState[telegramID]
+		if exist {
+			deleteConfig := tgbotapi.NewDeleteMessage(chatID, state.SentMessageID)
+
+			_, err = h.bot.Request(deleteConfig)
+			if err != nil {
+				log.Printf("Ошибка удаления сообщения: %v", err)
+				return
+			}
+			delete(h.deleteState, telegramID)
+		}
+
+		stateLibrary, exist := h.libraryState[telegramID]
+		if exist {
+			books, err := h.bookService.GetUserBooks(user.ID)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			pageSize := 4
+			totalPages := int(math.Ceil(float64(len(books)) / float64(pageSize)))
+			currentPage := stateLibrary.Page
+
+			if totalPages > 0 && currentPage >= totalPages {
+				currentPage = totalPages - 1
+			}
+			text, keyboard := h.buildBooksPage(books, currentPage)
+
+			edit := tgbotapi.NewEditMessageText(chatID, stateLibrary.MessageID, text)
+			edit.ReplyMarkup = &keyboard
+
+			_, err = h.bot.Send(edit)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		}
+
 		msg := tgbotapi.NewMessage(chatID, "🗑 Книга успешно удалена")
 		_, err = h.bot.Send(msg)
 		if err != nil {
@@ -214,17 +276,20 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			log.Println(err)
 			return
 		}
-		h.progressState[telegramID] = ProgressState{
-			BookID:    bookID,
-			MessageID: messageID,
-		}
 
 		msg := tgbotapi.NewMessage(chatID, "Введите текущую страницу книги сообщением")
-		_, err = h.bot.Send(msg)
+		sentMessage, err := h.bot.Send(msg)
 		if err != nil {
 			log.Println(err)
 			return
 		}
+
+		h.progressState[telegramID] = ProgressState{
+			BookID:        bookID,
+			MessageID:     messageID,
+			SentMessageID: sentMessage.MessageID,
+		}
+
 	case "startsession":
 		bookID, err := strconv.ParseInt(parts[1], 10, 64)
 		if err != nil {
@@ -295,19 +360,91 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			return
 		}
 
-		h.pagesState[telegramID] = PagesState{
-			BookID:    bookID,
-			MessageID: messageID,
-		}
-
 		msg := tgbotapi.NewMessage(chatID, "Введите количество страниц в книге")
-		_, err = h.bot.Send(msg)
+		sentMessage, err := h.bot.Send(msg)
 		if err != nil {
 			log.Println(err)
 			return
 		}
 
-	case "back":
+		h.pagesState[telegramID] = PagesState{
+			BookID:        bookID,
+			MessageID:     messageID,
+			SentMessageID: sentMessage.MessageID,
+		}
+	case "books":
+		if len(parts) < 3 {
+			return
+		}
+		page, err := strconv.Atoi(parts[2])
+		if err != nil {
+			log.Println(err)
+			return
+		}
 
+		user, err := h.bookService.GetUserByTelegramID(telegramID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		books, err := h.bookService.GetUserBooks(user.ID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		text, keyboard := h.buildBooksPage(books, page)
+
+		edit := tgbotapi.NewEditMessageText(chatID, messageID, text)
+		edit.ReplyMarkup = &keyboard
+
+		_, err = h.bot.Send(edit)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		h.libraryState[telegramID] = LibraryState{
+			MessageID: messageID,
+			Page:      page,
+		}
+
+	case "sessions":
+		if len(parts) < 3 {
+			return
+		}
+
+		page, err := strconv.Atoi(parts[2])
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		user, err := h.bookService.GetUserByTelegramID(telegramID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		sessions, err := h.sessionService.GetSessionHistory(user.ID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		text, keyboard := h.buildSessionsPage(sessions, page)
+
+		edit := tgbotapi.NewEditMessageText(chatID, messageID, text)
+		edit.ReplyMarkup = &keyboard
+
+		_, err = h.bot.Send(edit)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+	case "noop":
+		return
 	}
 }
