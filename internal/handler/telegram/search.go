@@ -65,6 +65,9 @@ func (h *Handler) handleSearch(chatID, telegramID int64, query string) bool {
 		}
 		builder.WriteString(author)
 		builder.WriteString("\n\n")
+		builder.WriteString("\n\n")
+		builder.WriteString("👇 Для выбора книги нажмите соответствующую кнопку с цифрой")
+
 		// создали кнопку
 		button := tgbotapi.NewInlineKeyboardButtonData("["+strconv.Itoa(i+1)+"]", "details:"+book.OpenLibraryID)
 		// добавили кнопку в слайс кнопок
