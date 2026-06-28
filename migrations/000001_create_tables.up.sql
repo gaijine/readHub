@@ -23,7 +23,6 @@ CREATE TABLE books
     
     cover_url       TEXT,
     created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
-    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
 
     UNIQUE(user_id, open_library_id),
     FOREIGN KEY (user_id) REFERENCES users(id)

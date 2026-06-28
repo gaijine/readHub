@@ -45,9 +45,8 @@ func (h *Handler) buildBookCard(book domain.Book) string {
 
 func (h *Handler) buildBookKeyboard(userID int64, book domain.Book) tgbotapi.InlineKeyboardMarkup {
 	var rows [][]tgbotapi.InlineKeyboardButton
-	var readingButton tgbotapi.InlineKeyboardButton
 
-	readingButton = tgbotapi.NewInlineKeyboardButtonData("▶ Начать чтение", "startsession:"+strconv.FormatInt(book.ID, 10))
+	readingButton := tgbotapi.NewInlineKeyboardButtonData("▶ Начать чтение", "startsession:"+strconv.FormatInt(book.ID, 10))
 	session, err := h.sessionService.GetActiveSession(userID)
 	if err == nil {
 		if session.BookID == book.ID {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"readHub/configs"
@@ -9,6 +10,7 @@ import (
 	"readHub/internal/handler/telegram"
 	"readHub/internal/postgres"
 	"readHub/internal/service"
+	"readHub/internal/worker"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -33,13 +35,20 @@ func main() {
 	bookService := service.NewBookService(bookRepo, userRepo, openLib)    // сервис бизнес-логики книг
 	sessionService := service.NewSessionService(sessionRepo, bookService) // сервис сессий чтения
 	statsService := service.NewStatsService(bookRepo, sessionRepo)
+	reminderRepo := postgres.NewReminderRepository(db)
+	reminderService := service.NewReminderService(reminderRepo, userRepo)
 
 	bot, err := tgbotapi.NewBotAPI(cfg.BotToken)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	handler := telegram.NewHandler(bookService, bot, sessionService, statsService)
+	reminderWorker := worker.NewReminderWorker(reminderService, bot)
+
+	handler := telegram.NewHandler(bookService, bot, sessionService, statsService, reminderService)
+
+	ctx, _ := context.WithCancel(context.Background())
+	go reminderWorker.Run(ctx)
 
 	handler.Run()
 	// client.SearchBooks("Alice")

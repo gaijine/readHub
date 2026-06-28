@@ -13,4 +13,7 @@ var (
 	ErrBookAlreadyCompleted          = errors.New("book already completed")
 	ErrInvalidTotalPages             = errors.New("you entered an incorrect total number of pages, it should not be negative or equal to zero.")
 	ErrTotalPagesLessThanCurrentPage = errors.New("the total number of pages cannot be less than the current page")
+	ErrReminderNotFound              = errors.New("you don't have an active reminder")
+	ErrBookAlreadyExists             = errors.New("book already exists")
+	ErrInvalidReminderTime           = errors.New("the reminder time is incorrect")
 )

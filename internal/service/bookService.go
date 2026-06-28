@@ -1,11 +1,14 @@
 package service
 
 import (
+	"errors"
 	"log"
 
 	openlibrary "readHub/internal/client/openlibrary"
 	"readHub/internal/domain"
 	"readHub/internal/repository"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type BookService interface {
@@ -60,11 +63,6 @@ func (b *bookService) SearchBooks(query string) ([]domain.SearchBook, error) {
 }
 
 func (b *bookService) AddBook(userID int64, bookInfo domain.SearchBook) error {
-	// bookInfo, err := b.openLib.GetByOpenLibraryID(openLibraryID)
-	// if err != nil {
-	// 	return err
-	// }
-
 	var author string
 	if len(bookInfo.Author) == 0 {
 		author = "Unknown"
@@ -86,6 +84,13 @@ func (b *bookService) AddBook(userID int64, bookInfo domain.SearchBook) error {
 	// return b.bookRepo.Create(book) так тоже можно записать, мол если метод вернет nil, то функция также вернет nil, с err также
 	err := b.bookRepo.Create(book)
 	if err != nil {
+		var pgErr *pgconn.PgError // хранит адрес ошибки PostgreSQL
+
+		if errors.As(err, &pgErr) { // смотрим внутри err лежит ли объект *PgError, если да кладем этот объект в pgErr
+			if pgErr.Code == "23505" { // проверка на код ошибки
+				return ErrBookAlreadyExists
+			}
+		}
 		return err
 	}
 	log.Println("book added successed")

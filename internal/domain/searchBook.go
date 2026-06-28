@@ -4,6 +4,6 @@ type SearchBook struct {
 	OpenLibraryID string
 	Title         string
 	Author        []string
-	TotalPages    *int
+	TotalPages    int
 	CoverURL      string
 }

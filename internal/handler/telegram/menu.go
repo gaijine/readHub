@@ -13,9 +13,13 @@ func (h *Handler) buildMainMenu() tgbotapi.ReplyKeyboardMarkup {
 		tgbotapi.NewKeyboardButton("📖 История"),
 	)
 
+	row3 := tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("🔔 Напоминание"),
+	)
+
 	// собираем клавиатуру по строкам
-	keyboard := tgbotapi.NewReplyKeyboard(row1, row2)
-	keyboard.ResizeKeyboard = true
+	keyboard := tgbotapi.NewReplyKeyboard(row1, row2, row3)
+	keyboard.ResizeKeyboard = true // для нормализации размера с пользовательскими настройками если не ошибаюсь
 
 	return keyboard
 }

@@ -9,6 +9,7 @@ import (
 )
 
 func (h *Handler) handleSearch(chatID, telegramID int64, query string) bool {
+	log.Println("handle search new")
 	if query == "" {
 		msg := tgbotapi.NewMessage(chatID, "Использование:\n/search Название книги")
 		_, err := h.bot.Send(msg)
@@ -65,8 +66,6 @@ func (h *Handler) handleSearch(chatID, telegramID int64, query string) bool {
 		}
 		builder.WriteString(author)
 		builder.WriteString("\n\n")
-		builder.WriteString("\n\n")
-		builder.WriteString("👇 Для выбора книги нажмите соответствующую кнопку с цифрой")
 
 		// создали кнопку
 		button := tgbotapi.NewInlineKeyboardButtonData("["+strconv.Itoa(i+1)+"]", "details:"+book.OpenLibraryID)
@@ -75,6 +74,8 @@ func (h *Handler) handleSearch(chatID, telegramID int64, query string) bool {
 	}
 	rows = append(rows, buttons)                          // добавили первый слайс в другой(получается вложенные слайсы)
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(rows...) // создали клавиатуру (внутри вложенные слайсы [][] первый отвечает за строки второй за столбцы)
+
+	log.Println(builder.String())
 
 	msg := tgbotapi.NewMessage(chatID, builder.String())
 	msg.ReplyMarkup = keyboard // прикрепили клавиатуру к сообщению

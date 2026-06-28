@@ -1,12 +1,14 @@
 package telegram
 
 import (
+	"errors"
 	"log"
 	"math"
 	"strconv"
 	"strings"
 
 	"readHub/internal/domain"
+	"readHub/internal/service"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -40,7 +42,7 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 		builder.WriteString("\n\n")
 		builder.WriteString("ID: ")
 		builder.WriteString(book.OpenLibraryID)
-
+		log.Printf("%+v\n", book)
 		button := tgbotapi.NewInlineKeyboardButtonData("Добавить", "add:"+book.OpenLibraryID)
 		button2 := tgbotapi.NewInlineKeyboardButtonData("Назад", "back:"+book.OpenLibraryID)
 		buttons = append(buttons, button)
@@ -59,14 +61,30 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 
 	case "add":
 		books := h.searchCache[telegramID]
+		found := false
 
 		var selectedBook domain.SearchBook
 
 		for _, book := range books {
 			if book.OpenLibraryID == parts[1] {
 				selectedBook = book
+				found = true
 				break
 			}
+		}
+
+		if !found {
+			log.Println("book not found in search cache:", parts[1])
+
+			msg := tgbotapi.NewMessage(chatID, "Поиск устарел. Выполните поиск книги ещё раз.")
+
+			_, err := h.bot.Send(msg)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			return
 		}
 
 		user, err := h.bookService.GetUserByTelegramID(telegramID)
@@ -74,15 +92,29 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 			log.Println(err)
 			return
 		}
+
+		log.Println("ID:", selectedBook.OpenLibraryID)
+		log.Println("TITLE:", selectedBook.Title)
 		log.Printf("%+v\n", selectedBook)
+
 		err = h.bookService.AddBook(user.ID, selectedBook)
-		if err != nil {
-			log.Println(err)
+		if err == nil {
+			msg := tgbotapi.NewMessage(chatID, "✅ Книга успешно добавлена в библиотеку")
+			_, err = h.bot.Send(msg)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		}
+		if errors.Is(err, service.ErrBookAlreadyExists) {
+			msg := tgbotapi.NewMessage(chatID, "📚 Эта книга уже есть в вашей библиотеке")
+			_, err = h.bot.Send(msg)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 			return
 		}
-
-		msg := tgbotapi.NewMessage(chatID, "✅ Книга успешно добавлена в библиотеку")
-		_, err = h.bot.Send(msg)
 		if err != nil {
 			log.Println(err)
 			return
@@ -446,5 +478,66 @@ func (h *Handler) handleCallback(update tgbotapi.Update) {
 
 	case "noop":
 		return
+
+	case "reminder":
+
+		switch parts[1] {
+		case "set":
+
+			msg := tgbotapi.NewMessage(chatID, "Введите новое время")
+			sentMess, err := h.bot.Send(msg)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			h.reminderState[telegramID] = ReminderState{
+				SentMessageID: sentMess.MessageID,
+				MessageID:     messageID,
+			}
+
+		case "on":
+			h.handleEnableReminder(chatID, telegramID)
+
+			user, err := h.bookService.GetUserByTelegramID(telegramID)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			reminder, err := h.reminderService.GetReminder(user.ID)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			err = h.updateReminderCard(chatID, messageID, reminder)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+		case "off":
+			h.handleDisableReminder(chatID, telegramID)
+
+			user, err := h.bookService.GetUserByTelegramID(telegramID)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			reminder, err := h.reminderService.GetReminder(user.ID)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			err = h.updateReminderCard(chatID, messageID, reminder)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		}
+
 	}
 }

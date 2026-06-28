@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"errors"
 	"log"
 	"strconv"
 	"strings"
@@ -10,6 +11,11 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
+
+type ReminderState struct {
+	SentMessageID int
+	MessageID     int
+}
 
 type LibraryState struct {
 	MessageID int
@@ -41,26 +47,30 @@ type Handler struct {
 	progressState map[int64]ProgressState       // будет хранится телеграм айди как ключь, айди книги и сообщения как значение, чтоб понимать у кого какую книгу обновлять
 	// для того чтоб после нажатия "обновить прогресс" в памяти сохранялось h.progressState[8798127434] = {3, 23}
 	// что значит Пользователь 8798127434 сейчас вводит прогресс для книги 3
-	sessionService service.SessionService
-	pagesState     map[int64]PagesState
-	statsService   service.StatsService
-	searchState    map[int64]SearchState
-	deleteState    map[int64]DeleteState
-	libraryState   map[int64]LibraryState
+	sessionService  service.SessionService
+	pagesState      map[int64]PagesState
+	statsService    service.StatsService
+	searchState     map[int64]SearchState
+	deleteState     map[int64]DeleteState
+	libraryState    map[int64]LibraryState
+	reminderService service.ReminderService
+	reminderState   map[int64]ReminderState
 }
 
-func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI, sessionService service.SessionService, statsService service.StatsService) *Handler {
+func NewHandler(bookService service.BookService, bot *tgbotapi.BotAPI, sessionService service.SessionService, statsService service.StatsService, reminderService service.ReminderService) *Handler {
 	return &Handler{
-		bookService:    bookService,
-		bot:            bot,
-		searchCache:    make(map[int64][]domain.SearchBook),
-		progressState:  make(map[int64]ProgressState),
-		sessionService: sessionService,
-		pagesState:     make(map[int64]PagesState),
-		statsService:   statsService,
-		searchState:    make(map[int64]SearchState),
-		deleteState:    make(map[int64]DeleteState),
-		libraryState:   make(map[int64]LibraryState),
+		bookService:     bookService,
+		bot:             bot,
+		searchCache:     make(map[int64][]domain.SearchBook),
+		progressState:   make(map[int64]ProgressState),
+		sessionService:  sessionService,
+		pagesState:      make(map[int64]PagesState),
+		statsService:    statsService,
+		searchState:     make(map[int64]SearchState),
+		deleteState:     make(map[int64]DeleteState),
+		libraryState:    make(map[int64]LibraryState),
+		reminderService: reminderService,
+		reminderState:   make(map[int64]ReminderState),
 	}
 }
 
@@ -210,6 +220,57 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 		return
 	}
 
+	remState, exists := h.reminderState[telegramID]
+	if exists {
+		err := h.handleSetReminder(chatID, telegramID, text)
+		if err != nil {
+			if errors.Is(err, service.ErrInvalidReminderTime) {
+				msg := tgbotapi.NewMessage(chatID, "Формат времени неверный. \nНапишите время в формате ЧЧ:ММ, \nнапример, *23:21* или *6:06*")
+				_, sendErr := h.bot.Send(msg)
+				if sendErr != nil {
+					log.Println(sendErr)
+					return
+				}
+				return
+			}
+			log.Println(err)
+			return
+		}
+
+		deleteConfig := tgbotapi.NewDeleteMessage(chatID, update.Message.MessageID)
+		_, err = h.bot.Request(deleteConfig)
+		if err != nil {
+			log.Printf("Ошибка удаления сообщения: %v", err)
+		}
+
+		deleteConfig2 := tgbotapi.NewDeleteMessage(chatID, remState.SentMessageID)
+		_, err = h.bot.Request(deleteConfig2)
+		if err != nil {
+			log.Printf("Ошибка удаления сообщения: %v", err)
+		}
+
+		user, err := h.bookService.GetUserByTelegramID(telegramID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		reminder, err := h.reminderService.GetReminder(user.ID)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		err = h.updateReminderCard(chatID, remState.MessageID, reminder)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		delete(h.reminderState, telegramID)
+		return
+	}
+
 	switch text {
 	case "🔍 Поиск книги":
 		h.searchState[telegramID] = SearchState{}
@@ -229,6 +290,9 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 		return
 	case "📖 История":
 		h.handleSessions(chatID, telegramID)
+		return
+	case "🔔 Напоминание":
+		h.handleReminderMenu(chatID, telegramID)
 		return
 	}
 
@@ -252,5 +316,11 @@ func (h *Handler) handleMessage(update tgbotapi.Update) {
 		h.handleStats(chatID, telegramID)
 	case "/sessions":
 		h.handleSessions(chatID, telegramID)
+	case "/setreminder":
+		h.handleSetReminder(chatID, telegramID, query)
+	case "/reminder":
+		h.handleReminder(chatID, telegramID)
+	case "/reminderoff":
+		h.handleDisableReminder(chatID, telegramID)
 	}
 }

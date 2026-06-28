@@ -6,6 +6,7 @@ import (
 
 	"readHub/internal/domain"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -31,9 +32,9 @@ func (r *PostgresReminderRepository) Create(reminder domain.Reminder) error {
 	return nil
 }
 
-func (r *PostgresReminderRepository) Update(userID int64, newTime string) error {
+func (r *PostgresReminderRepository) Update(userID int64, newTime time.Time) error {
 	_, err := r.db.Exec(context.Background(),
-		"UPDATE reminders SET reminder_time=$1, is_enabled=true WHERE user_id=$2",
+		"UPDATE reminders SET reminder_time=$1, is_enabled=true, last_sent_at=NULL WHERE user_id=$2",
 		newTime,
 		userID,
 	)
@@ -44,12 +45,30 @@ func (r *PostgresReminderRepository) Update(userID int64, newTime string) error 
 }
 
 func (r *PostgresReminderRepository) Disable(userID int64) error {
-	_, err := r.db.Exec(context.Background(),
+	commandTag, err := r.db.Exec(context.Background(),
 		"UPDATE reminders SET is_enabled=false WHERE user_id=$1",
 		userID,
 	)
 	if err != nil {
 		return err
+	}
+	// результат запроса, кол-во строк затронутых запросом, если 0 значит ничего не изменилось
+	if commandTag.RowsAffected() == 0 {
+		return pgx.ErrNoRows // ошибка, строка не найдена
+	}
+	return nil
+}
+
+func (r *PostgresReminderRepository) Enable(userID int64) error {
+	commandTag, err := r.db.Exec(context.Background(),
+		"UPDATE reminders SET is_enabled=true WHERE user_id=$1",
+		userID,
+	)
+	if err != nil {
+		return err
+	}
+	if commandTag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
 	}
 	return nil
 }
