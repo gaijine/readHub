@@ -39,6 +39,7 @@ func (w *ReminderWorker) Run(ctx context.Context) {
 		// тоже своего рода канал который будет читать если закрыли канал, будет получать сигнал
 		// тип канала пустая структурка, и после сигнала разблокируется горутина и ретурном завершится
 		case <-ctx.Done():
+			log.Println("ReminderWorker stopped")
 			return
 		}
 	}

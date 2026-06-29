@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"readHub/configs"
 	openlibrary "readHub/internal/client/openlibrary"
@@ -47,15 +50,19 @@ func main() {
 
 	handler := telegram.NewHandler(bookService, bot, sessionService, statsService, reminderService)
 
-	ctx, _ := context.WithCancel(context.Background())
-	go reminderWorker.Run(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
 
-	handler.Run()
-	// client.SearchBooks("Alice")
-	// resp, err := http.Get("https://openlibrary.org")
-	// if err != nil {
-	// 	log.Println(err)
-	// 	return
-	// }
-	// fmt.Println(resp.Status)
+	go reminderWorker.Run(ctx)
+	go handler.Run()
+
+	quit := make(chan os.Signal, 1)
+
+	// если пользователь нажмет ctrl+c или процесс получит sigterm, положи этот сигнал в канал quit
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	// блокирует мэин, она будет ждать сигнала
+	<-quit
+
+	log.Println("Received shutdown signal")
+	cancel()
+	log.Println("Application stopped")
 }
